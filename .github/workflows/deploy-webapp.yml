@@ -1,0 +1,40 @@
+name: Build and deploy Node.js app to Azure Web App - pa4-24030006
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: pa4-24030006
+  APP_PATH: webapp
+  NODE_VERSION: 20.x
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.APP_PATH }}/package-lock.json
+
+      - name: Install web app dependencies
+        working-directory: ${{ env.APP_PATH }}
+        run: npm ci
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.APP_PATH }}
