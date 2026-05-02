@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -32,9 +33,15 @@ jobs:
         working-directory: ${{ env.APP_PATH }}
         run: npm ci
 
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_4C7846F453984C72BE3210A89B3F4829 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_12B0097E0574440F8B1747527ACC357E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_39694049D00B4F50A437AE448EA9B1CA }}
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: ${{ env.APP_PATH }}
