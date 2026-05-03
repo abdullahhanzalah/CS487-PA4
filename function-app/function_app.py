@@ -1,6 +1,7 @@
 import azure.functions as func
 import azure.durable_functions as df
 import os, json, time, requests
+from datetime import datetime, timedelta, timezone
 
 app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
 
@@ -36,6 +37,7 @@ def report_activity(order: dict) -> str:
         ContainerGroupRestartPolicy, ContainerGroupIdentity, ResourceIdentityType
     )
     from azure.identity import DefaultAzureCredential
+    from azure.storage.blob import BlobServiceClient, BlobSasPermissions, generate_blob_sas
 
     sub_id   = os.environ["SUBSCRIPTION_ID"]
     rg       = os.environ["REPORT_RG"]
@@ -92,7 +94,24 @@ def report_activity(order: dict) -> str:
         if final_state != "Succeeded":
             raise RuntimeError(f"ACI report job ended in state: {final_state or 'Unknown'}")
 
-        return f"{os.environ['STORAGE_ACCOUNT_URL']}/reports/{order_id}.pdf"
+        storage_account_url = os.environ["STORAGE_ACCOUNT_URL"]
+        blob_service = BlobServiceClient(
+            account_url=storage_account_url,
+            credential=DefaultAzureCredential(),
+        )
+        start = datetime.now(timezone.utc) - timedelta(minutes=5)
+        expiry = start + timedelta(hours=12)
+        delegation_key = blob_service.get_user_delegation_key(start, expiry)
+        sas_token = generate_blob_sas(
+            account_name=blob_service.account_name,
+            container_name="reports",
+            blob_name=f"{order_id}.pdf",
+            user_delegation_key=delegation_key,
+            permission=BlobSasPermissions(read=True),
+            start=start,
+            expiry=expiry,
+        )
+        return f"{storage_account_url}/reports/{order_id}.pdf?{sas_token}"
     finally:
         try:
             client.container_groups.begin_delete(rg, name).result()
