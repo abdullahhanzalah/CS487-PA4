@@ -19,7 +19,7 @@ Copy this file to <code style="color:#111827;background:#ddd6fe;padding:2px 4px;
 | Roll Number | 24030006 |
 | GitHub Repository URL | `https://github.com/abdullahhanzalah/CS487-PA4` |
 | Resource Group | `rg-sp26-24030006` |
-| Assigned Region | `se central` |
+| Assigned Region | `Sweden Central` |
 
 ## Evidence Rules
 
@@ -55,6 +55,12 @@ Description: This Deployment Center view shows the Web App connected to my GitHu
 ![TaskFlow frontend loaded in browser](docs/imported/task1_04.png)
 
 Description: This browser screenshot shows the TaskFlow frontend loading from the live App Service domain. It proves the frontend bundle deployed successfully and is being served publicly by Azure App Service.
+
+### Evidence 1.5: Web App Application Settings
+
+![Web App application settings](docs/imported/task1_05.png)
+
+Description: This Web App environment-variables screen shows `FUNCTION_START_URL` and `FUNCTION_STATUS_URL` configured. These are the only backend settings the frontend needs, and their actual values were populated later once the Function App starter and status endpoints were available.
 
 ---
 
@@ -112,7 +118,13 @@ Description: The completed Durable Functions implementation is in `function-app/
 
 ![Local Durable Function handler listing](docs/imported/task3_13.png)
 
-Description: This `func start` output shows the local Functions runtime discovering all four handlers: `http_starter`, `my_orchestrator`, `validate_activity`, and `report_activity`. That confirms the decorators and entry points were wired correctly before cloud deployment.
+Description: This `func start` output shows the local Functions runtime discovering all four handlers: `http_starter`, `my_orchestrator`, `validate_activity`, and `report_activity`. That confirms the decorators and entry points were wired correctly before cloud deployment; later validator-backed execution evidence appears again in Task 5.4 and Task 7.2.
+
+### Evidence 3.3: Local `validate_activity` Smoke Test After Task 5
+
+![Local Durable Function smoke test against deployed validator](docs/imported/validate_smoke_test.png)
+
+Description: This local `curl` call to `http://localhost:7071/api/orchestrators/my_orchestrator` returns an orchestration instance ID and `statusQueryGetUri` after `VALIDATE_URL` was pointed at the deployed AKS validator. It shows the local Durable Functions host could start the orchestration and reach the validator-backed path required by the Task 3.3 post-Task-5 smoke test.
 
 ---
 
@@ -124,13 +136,19 @@ Description: This `func start` output shows the local Functions runtime discover
 
 Description: This overview shows Function App `pa4-24030006-fn` in `Running` state and using the ACR image `pa424030006.azurecr.io/func-app:v1`. This screenshot captures the original Task 4 container deployment; later in the project the Function App was redeployed with `func-app:v2` after the signed-report-URL fix.
 
-### Evidence 4.2: Orchestration Smoke Test
+### Evidence 4.2: Functions List in Azure Portal
+
+![Functions list in the Function App](docs/imported/task4_15.png)
+
+Description: This Function App portal view shows all four registered functions: `http_starter`, `my_orchestrator`, `report_activity`, and `validate_activity`. It confirms that Azure indexed the deployed container correctly and exposed the required handlers in the portal.
+
+### Evidence 4.3: Orchestration Smoke Test
 
 ![Starter curl returning orchestration URLs](docs/imported/task4_16.png)
 
 Description: This starter `curl` call returns an orchestration `id`, `statusQueryGetUri`, and the related terminate/rewind endpoints. That proves the HTTP starter endpoint is reachable and that Durable Functions is successfully creating orchestration instances in Azure.
 
-### Evidence 4.3: Expected Failed Status Before Downstream Wiring
+### Evidence 4.4: Expected Failed Status Before Downstream Wiring
 
 ![Expected pre-wiring failure from status query](docs/imported/task4_17.png)
 
@@ -285,39 +303,20 @@ Description: The same happy-path order `ORD-001` can be traced across all backen
 
 Description: The invalid order `BAD-001` with quantity `101` is rejected in the UI, the orchestration status JSON returns `{"status":"rejected","reason":"quantity exceeds limit"}`, and `az container list` shows no `ci-report-bad-001` container group. This proves the workflow stops immediately after validation failure and does not launch the report ACI for rejected orders.
 
+### Evidence 7.4: Resource Group Overview
+
+![Resource group overview showing deployed resources](docs/imported/resource_group.png)
+
+Description: This Azure portal resource-group overview shows the deployed TaskFlow resources inside `rg-sp26-24030006`, including the AKS cluster, managed identity, App Service plan, Web App, Function App, ACR, storage accounts, and related resources. It serves as the final inventory screenshot requested by the manual for the end-to-end section.
+
 ---
 
 ## Task 8: Write-up and Architecture Diagram (5 points)
 
 ### Evidence 8.1: Architecture Diagram
 
-```mermaid
-flowchart LR
-    U["User Browser"]
-    GH["GitHub Repo<br/>abdullahhanzalah/CS487-PA4"]
-    GHA["GitHub Actions<br/>Web App deployment"]
-    WA["Azure App Service Web App<br/>pa4-24030006"]
-    FA["Azure Function App (Container)<br/>pa4-24030006-fn"]
-    AKS["AKS Validator Service<br/>validate-service"]
-    ACI["Azure Container Instances<br/>ci-report-&lt;order_id&gt;"]
-    BLOB["Azure Blob Storage<br/>pa424030006 / reports"]
-    ACR["Azure Container Registry<br/>pa424030006"]
-    MI["User-assigned Managed Identity<br/>mi-pa4-24030006"]
 
-    U --> WA
-    GH --> GHA --> WA
-    ACR --> FA
-    ACR --> AKS
-    ACR --> ACI
-    WA -->|"FUNCTION_START_URL / FUNCTION_STATUS_URL"| FA
-    FA -->|"VALIDATE_URL"| AKS
-    FA -->|"create, poll, delete"| ACI
-    MI --> FA
-    ACI -->|"upload PDF"| BLOB
-    FA -->|"return signed report URL"| WA
-```
-
-Description: This architecture diagram reflects the final deployed system: GitHub and GitHub Actions for the frontend deployment, App Service for the web UI, the containerized Durable Function App for orchestration, AKS for always-on validation, ACI for one-shot report generation, Blob Storage for PDF output, ACR for container images, and the managed identity used for Azure-side access.
+Description: This architecture diagram reflects the final deployed system: GitHub and GitHub Actions for the frontend deployment, App Service for the web UI, the containerized Durable Function App for orchestration, AKS for always-on validation, ACI for one-shot report generation, Blob Storage for PDF output, ACR for container images, and the managed identity used for Azure-side access. The same diagram source is also committed as `docs/architecture-diagram.mmd`.
 
 ### Question 8.2: Service Selection
 
