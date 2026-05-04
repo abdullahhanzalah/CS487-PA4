@@ -21,6 +21,8 @@ Copy this file to <code style="color:#111827;background:#ddd6fe;padding:2px 4px;
 | Resource Group | `rg-sp26-24030006` |
 | Assigned Region | `Sweden Central` |
 
+Note: The final live deployment is region-split. App Service, Function App, ACR, and Storage are in `Sweden Central`, while the AKS cluster ended up in `UK West` because the commands did not specify region. I have confirmed with Maaz Shahid TA as well and it shouldnt be a problem. The evidence below describes the actual deployed state shown in the screenshots.
+
 ## Evidence Rules
 
 - Use relative image paths, for example: `![AKS nodes](docs/aks-nodes.png)`.
@@ -78,19 +80,25 @@ Description: This portal overview shows Azure Container Registry `pa424030006` i
 
 ![validate-api Docker build](docs/imported/task2_07.png)
 
+Description: This build log shows the `validate-api` image building successfully from the `validate-api/` folder.
+
 **`report-job` build**
 
 ![report-job Docker build](docs/imported/task2_08.png)
+
+Description: This build log shows the `report-job` image building successfully from the `report-job/` folder.
 
 **`func-app` build**
 
 ![func-app Docker build](docs/imported/task2_09.png)
 
+Description: This build log shows the `func-app` image building successfully from the `function-app/` folder.
+
 **Validator local test**
 
 ![Local curl command](docs/imported/task2_10.png)
 
-Description: These terminal screenshots show successful local Docker builds for `validate-api`, `report-job`, and `func-app`. The images were built from the `/validate-api`, `/report-job`, and `/function-app` folders respectively, and on Apple Silicon the builds were done with `linux/amd64` where required by the Azure base images.
+Description: This local run verifies that the built validator container can start and respond to the expected API call.
 
 ### Evidence 2.3: ACR Repositories
 
@@ -98,11 +106,13 @@ Description: These terminal screenshots show successful local Docker builds for 
 
 ![Docker push output to ACR](docs/imported/task2_11.png)
 
+Description: This terminal output shows the three course images being tagged and pushed to Azure Container Registry.
+
 **Repository listing**
 
 ![ACR repository list](docs/imported/task2_12.png)
 
-Description: The push logs show the `v1` images being pushed to `pa424030006.azurecr.io`, and the repository listing confirms that `validate-api`, `report-job`, and `func-app` exist in the registry. At Task 2 time the required deliverables were `validate-api:v1`, `report-job:v1`, and `func-app:v1`; the Function App image was later updated to `v2` only after the signed-report-URL fix.
+Description: This repository listing confirms that `validate-api`, `report-job`, and `func-app` exist in ACR after the push.
 
 ---
 
@@ -170,11 +180,13 @@ Description: This AKS overview shows cluster `pa4-24030006` in resource group `r
 
 ![kubectl get nodes](docs/imported/task5_18.png)
 
+Description: `kubectl get nodes` shows one Ready AKS node, confirming the cluster came up successfully.
+
 **Validator pod**
 
 ![kubectl get pods](docs/imported/task5_19.png)
 
-Description: `kubectl get nodes` shows one Ready AKS node, and `kubectl get pods -w` shows the validator pod `validate-deployment-5799dbccb6-j5274` reaching `1/1 Running`. That proves the validator deployment was scheduled successfully and became healthy on the cluster.
+Description: `kubectl get pods -w` shows the validator pod reaching `1/1 Running`, which proves the deployment was scheduled and became healthy.
 
 ### Evidence 5.3: Kubernetes Service
 
@@ -244,19 +256,25 @@ Description: This app-settings query confirms that the Function App has `REPORT_
 
 ![Happy-path order before submit](docs/imported/task7_29.png)
 
+Description: This screenshot shows the valid order payload before submission in the live TaskFlow UI.
+
 **Running status**
 
 ![Happy-path running status](docs/imported/task7_30.png)
+
+Description: This screenshot shows the order in the `Pending` state while the Durable orchestration is still executing.
 
 **Completed status**
 
 ![Happy-path completed status](docs/imported/task7_31.png)
 
+Description: This screenshot shows the final `Completed` state with the generated report URL returned by the pipeline.
+
 **Opened PDF**
 
 ![Happy-path PDF opened](docs/imported/task7_32.png)
 
-Description: These screenshots show the full happy path for order `ORD-001`: the valid payload `ORD-001 / WIDGET-X / qty 2`, the `Pending` status with orchestration ID, the `Completed` status with the report link, and the opened PDF itself. Because the validator accepted the order, the workflow produced a signed report URL and the generated PDF opened successfully in the browser.
+Description: This screenshot shows the opened PDF report for the same successful order, proving the end-to-end path completed.
 
 **Backend Participation**
 
@@ -264,28 +282,39 @@ Description: These screenshots show the full happy path for order `ORD-001`: the
 
 ![Function App log tail showing http_starter and validate_activity](docs/imported/task7_33.png)
 
+Description: This log tail shows the Function App receiving the request and executing `http_starter`, `my_orchestrator`, and `validate_activity`.
+
 **Function App live log stream: report activity, blob upload, and ACI cleanup**
 
 ![Function App log tail showing report_activity upload and delete](docs/imported/task7_35.png)
+
+Description: This log tail shows `report_activity` managing the report job, uploading the PDF, and cleaning up the temporary container.
 
 **Function App live log stream: Orchestrator Execution**
 
 ![Function App log tail showing report_activity orchestrator execution](docs/imported/task7_36.png)
 
+Description: This log tail shows the orchestrator continuing through the report stage after validation succeeded.
+
 **ACI Spawn evidence**
 
 ![az container list output](docs/imported/task7_37.png)
 
+Description: This `az container list` output shows the per-order ACI report container being created for the happy-path request.
 
 **Blob storage evidence**
 
 ![ORD-001.pdf in reports container](docs/imported/task7_38.png)
 
+Description: This storage screenshot shows `ORD-001.pdf` present in the `reports` container after the run.
+
 **AKS validator evidence**
 
 ![AKS validator pod live logs](docs/imported/task7_39.png)
 
-Description: The same happy-path order `ORD-001` can be traced across all backend services: the Function App log shows `http_starter`, `my_orchestrator`, `validate_activity`, and `report_activity`; the report log shows the temporary `ci-report-ord-001` container group being managed and the PDF upload completing; the AKS pod log shows `POST /validate HTTP/1.1 200 OK`; and the `reports` container contains `ORD-001.pdf`. Application Insights resource creation was blocked by Azure RBAC in this subscription, so the Function App invocation evidence here uses the TA-approved live log stream instead of the portal Invocations view.
+Description: This AKS log shows the validator service handling the `/validate` request for the same successful order.
+
+Summary: The same happy-path order `ORD-001` can be traced across all backend services: the Function App log shows `http_starter`, `my_orchestrator`, `validate_activity`, and `report_activity`; the report log shows the temporary `ci-report-ord-001` container group being managed and the PDF upload completing; the AKS pod log shows `POST /validate HTTP/1.1 200 OK`; and the `reports` container contains `ORD-001.pdf`. Application Insights resource creation was blocked by Azure RBAC in this subscription, so the Function App invocation evidence here uses the TA-approved live log stream instead of the portal Invocations view.
 
 ### Evidence 7.3: Reject Path UI
 
@@ -293,15 +322,21 @@ Description: The same happy-path order `ORD-001` can be traced across all backen
 
 ![Rejected order in TaskFlow UI](docs/imported/task7_40.png)
 
+Description: This screenshot shows the invalid order rejected in the live UI because the quantity exceeds the validator rule.
+
 **No report container created**
 
 ![No ci-report-bad-001 container group](docs/imported/task7_41.png)
+
+Description: This container listing shows that no report ACI was created for the rejected order.
 
 **Rejected orchestration output**
 
 ![Rejected orchestration status JSON](docs/imported/task7_43.png)
 
-Description: The invalid order `BAD-001` with quantity `101` is rejected in the UI, the orchestration status JSON returns `{"status":"rejected","reason":"quantity exceeds limit"}`, and `az container list` shows no `ci-report-bad-001` container group. This proves the workflow stops immediately after validation failure and does not launch the report ACI for rejected orders.
+Description: This orchestration status JSON shows `status: rejected` with reason `quantity exceeds limit` for the same invalid order.
+
+Summary: The invalid order `BAD-001` with quantity `101` is rejected in the UI, the orchestration status JSON returns `{"status":"rejected","reason":"quantity exceeds limit"}`, and `az container list` shows no `ci-report-bad-001` container group. This proves the workflow stops immediately after validation failure and does not launch the report ACI for rejected orders.
 
 ### Evidence 7.4: Resource Group Overview
 
