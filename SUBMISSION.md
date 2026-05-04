@@ -315,8 +315,9 @@ Description: This Azure portal resource-group overview shows the deployed TaskFl
 
 ### Evidence 8.1: Architecture Diagram
 
+![Architecture diagram](docs/architecture_diagram.png)
 
-Description: This architecture diagram reflects the final deployed system: GitHub and GitHub Actions for the frontend deployment, App Service for the web UI, the containerized Durable Function App for orchestration, AKS for always-on validation, ACI for one-shot report generation, Blob Storage for PDF output, ACR for container images, and the managed identity used for Azure-side access. The same diagram source is also committed as `docs/architecture-diagram.mmd`.
+Description: This architecture diagram shows the final deployed TaskFlow solution committed in `docs/architecture_diagram.png`. It includes the manual’s required relationships: GitHub Actions deploying the frontend to App Service, the Web App calling the Function App for order start and status polling, the Function App calling AKS for validation, the Function App creating an ephemeral per-run ACI report container, the report container writing the PDF to Blob Storage, ACR supplying images to the Function App, AKS, and ACI, and the managed-identity / IAM relationship tied to resource group `rg-sp26-24030006`.
 
 ### Question 8.2: Service Selection
 
